@@ -1,0 +1,48 @@
+version: "3.7"
+services:
+  traefik:
+    image: traefik:latest
+    build:
+      context: .
+      dockerfile: traefik.dockerfile
+    environment:
+      - 'CLOUDFLARE_EMAIL="${cloudflareemail}"'
+      - 'CLOUDFLARE_API_KEY="${cloudflaretoken}"'
+      - 'constraint:node==manager'
+      - 'DOCKER_HOST=tcp://example.com:2375'
+    labels:
+      - traefik.enable=true
+      - traefik.backend=traefik
+      - traefik.backend.loadbalancer.method=wrr
+      # - traefik.docker.network=OceanTerraSwarm_front-tier
+      - 'traefik.frontend.rule=Host:traefik.${deploy_domain}'
+      - traefik.frontend.passHostHeader=true
+      - traefik.port=7000
+      - traefik.protocol=http
+    # networks:
+    #   - front-tier
+    #   - back-tier
+    ports:
+      - '80:80'
+      - '443:443'
+      - '8080:8080'
+    restart: always
+    deploy:
+      mode: replicated
+      labels:
+        - traefik.enable=true
+        - traefik.backend=traefik
+        - traefik.backend.loadbalancer.method=wrr
+        # - traefik.docker.network=OceanTerraSwarm_front-tier
+        - 'traefik.frontend.rule=Host:traefik.${deploy_domain}'
+        - traefik.frontend.passHostHeader=true
+        - traefik.port=8080
+        - traefik.protocol=http
+      placement:
+        constraints:
+          - node.role == manager
+    volumes:
+#      - /etc/ssl:/etc/ssl
+      - type: bind
+        source: /var/run/docker.sock
+        target: /var/run/docker.sock
