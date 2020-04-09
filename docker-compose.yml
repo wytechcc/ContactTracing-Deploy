@@ -1,10 +1,9 @@
 version: "3.7"
 services:
   static:
-    image: nginx:latest
-    volumes:
-      - nginx.conf:/etc/nginx/nginx.conf
-      - default:/etc/nginx/sites-enabled/default.conf
+    build:
+      context: .
+      dockerfile: nginx.dockerfile
     labels:
       - traefik.docker.network=ContactTracing-Deploy_frontend
       - traefik.enable=true
@@ -17,7 +16,9 @@ services:
     networks:
       - frontend
   api:
-    build: .
+    build:
+      context: .
+      dockerfile: api.dockerfile
     depends_on:
       - db
     networks:
@@ -36,7 +37,8 @@ services:
     image: cockroachdb:latest
     networks:
       - backend
-    db:
+    volumes:
+      - db
   traefik:
     image: traefik:latest
     build:
@@ -85,8 +87,12 @@ services:
         constraints:
           - node.role == manager
     volumes:
-      - traefik.toml:/traefik.toml
 #      - /etc/ssl:/etc/ssl
       - type: bind
         source: /var/run/docker.sock
         target: /var/run/docker.sock
+volumes:
+  db:
+networks:
+  frontend:
+  backend:
