@@ -1,5 +1,42 @@
 version: "3.7"
 services:
+  static:
+    image: nginx:latest
+    volumes:
+      - nginx.conf:/etc/nginx/nginx.conf
+      - default:/etc/nginx/sites-enabled/default.conf
+    labels:
+      - traefik.docker.network=ContactTracing-Deploy_frontend
+      - traefik.enable=true
+      - traefik.backend=static
+      - traefik.backend.loadbalancer.method=wrr
+      - "traefik.frontend.rule=Host(${deploy_domain}) && Path('/static/')"
+      - traefik.frontend.passHostHeader=true
+      - traefik.port=7000
+      - traefik.protocol=http
+    networks:
+      - frontend
+  api:
+    build: .
+    depends_on:
+      - db
+    networks:
+      - frontend
+      - backend
+    labels:
+      - traefik.enable=true
+      - traefik.backend=api
+      - traefik.backend.loadbalancer.method=wrr
+      - traefik.docker.network=ContactTracing-Deploy_frontend
+      - "traefik.frontend.rule=Host(${deploy_domain}) && Path('/api/')"
+      - traefik.frontend.passHostHeader=true
+      - traefik.port=8000
+      - traefik.protocol=http
+  db:
+    image: cockroachdb:latest
+    networks:
+      - backend
+    db:
   traefik:
     image: traefik:latest
     build:
@@ -14,11 +51,14 @@ services:
       - traefik.enable=true
       - traefik.backend=traefik
       - traefik.backend.loadbalancer.method=wrr
-      # - traefik.docker.network=OceanTerraSwarm_front-tier
-      - 'traefik.frontend.rule=Host:traefik.${deploy_domain}'
+      - traefik.docker.network=ContactTracing-Deploy_frontend
+      - "traefik.frontend.rule=Host(traefik.${deploy_domain})"
       - traefik.frontend.passHostHeader=true
       - traefik.port=7000
       - traefik.protocol=http
+    networks:
+      - frontend
+      - default
     # networks:
     #   - front-tier
     #   - back-tier
@@ -27,6 +67,9 @@ services:
       - '443:443'
       - '8080:8080'
     restart: always
+    depends_on:
+      - static
+      - api
     deploy:
       mode: replicated
       labels:
@@ -42,6 +85,7 @@ services:
         constraints:
           - node.role == manager
     volumes:
+      - traefik.toml:/traefik.toml
 #      - /etc/ssl:/etc/ssl
       - type: bind
         source: /var/run/docker.sock

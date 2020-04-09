@@ -1,0 +1,39 @@
+defaultEntryPoints = ["http","https"]
+logLevel="DEBUG"
+debug=true
+accessLogsFile = "/dev/stdout"
+exposedbydefault = true
+domain = "example.com"
+[retry]
+[accessLog]
+[api]
+dashboard = true
+[ping]
+[entryPoints]
+ [entryPoints.traefik]
+ address = ":8080"
+ [entryPoints.traefik.auth.basic]
+  users = ["htpasswd -nB username"]
+  [entryPoints.http]
+  address = ":80"
+  [entryPoints.https]
+  address = ":443"
+    [entryPoints.https.tls]
+      [entryPoints.https.redirect]
+      entryPoint = "http"
+[provider.docker]
+#endpoint = "unix:///var/run/docker.sock"
+#endpoint = "tcp://8.8.8.8:2375"
+endpoint = "tcp://example.com:2375"
+domain = "example.com"
+watch = true
+exposedbydefault = true
+usebindportip = true
+#swarmmode = true
+[docker.tls]
+PEM = true
+CAOptional = true
+ca = "/etc/ssl/ca.pem"
+cert = "/etc/ssl/cert.pem"
+key = "/etc/ssl/key.pem"
+insecureskipverify = true
